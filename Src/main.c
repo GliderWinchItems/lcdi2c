@@ -303,6 +303,27 @@ void StartDefaultTask(void *argument)
     // Print text at cursor position
     lcdPrintStr(pu1,(uint8_t*)"4 abcdefghijklmnopqr", 20);
 
+      struct LCDPARAMS* pu2;
+  pu2 = lcdInit(&hi2c1, (uint8_t)0x26, (uint8_t)4, (uint8_t)16);
+  if (pu1 == NULL) morse_trap(55);
+    // Print text and home position 0,0
+    lcdPrintStr(pu2,(uint8_t*)"1 Yes indeed,", 13);
+
+    // Set cursor at zero position of line 2
+    lcdSetCursorPosition(pu2,0, 1);
+    // Print text at cursor position
+    lcdPrintStr(pu2,(uint8_t*)"2 Yellow ", 9);
+
+    // Set cursor at zero position of line 3
+    lcdSetCursorPosition(pu2,0, 2);
+    // Print text at cursor position
+    lcdPrintStr(pu2,(uint8_t*)"3 lcdic2X16", 10);
+
+    // Set cursor at zero position of line 4
+    lcdSetCursorPosition(pu2,0, 3);
+    // Print text at cursor position
+    lcdPrintStr(pu2,(uint8_t*)"4 ijklmnopqrstuvwxyz", 20);
+    
 
     for (;;) {
 		HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_15); // BLUE LED

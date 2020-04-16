@@ -85,7 +85,7 @@ struct LCDPARAMS* lcdInit(I2C_HandleTypeDef *hi2c, uint8_t address, uint8_t line
 	{
 		while (p1->next != NULL) 
 		{
-			if ((p1->hi2c == hi2c) && (p1->address == address))
+			if ((p1->hi2c == hi2c) && ((p1->address >> 1) == address))
 			{ // Here, already on list
 				return p1;
 			}
@@ -312,13 +312,27 @@ bool lcdBacklight(struct LCDPARAMS* p1, uint8_t command) {
  */
 bool lcdSetCursorPosition(struct LCDPARAMS* p1, uint8_t column, uint8_t line) {
     // We will setup offsets for 4 lines maximum
-    static const uint8_t lineOffsets[4] = { 0x00, 0x40, 0x14, 0x54 };
+    static const uint8_t lineOffsets[4]     = { 0x00, 0x40, 0x14, 0x54 };
+    static const uint8_t lineOffsets4x16[4] = { 0x00, 0x40, 0x10, 0x50 };
+    static const uint8_t lineOffsets2x16[4] = { 0x00, 0x40, 0x14, 0x54 };
+
+    uint8_t* plo = &lineOffsets[0];
 
     if ( line >= p1->lines ) {
         line = p1->lines - 1;
     }
 
-    uint8_t lcdCommand = LCD_BIT_SETDDRAMADDR | (column + lineOffsets[line]);
+    if (p1->lines == 4)
+    {
+        if (p1->columns == 16)
+            plo = &lineOffsets4x16[0];
+    }
+    else
+    {
+        if (p1->lines == 2)
+            plo = &lineOffsets2x16[0];
+    }
+    uint8_t lcdCommand = LCD_BIT_SETDDRAMADDR | (column + *(plo+line));
 
     return lcdWriteByte(p1, 0x00, &lcdCommand);
 }
