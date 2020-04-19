@@ -24,8 +24,11 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+#include "LcdTask.h"
 #include "lcd_hd44780_i2c.h"
 #include "morse.h"
+#include "DTW_counter.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -66,6 +69,9 @@ static void MX_I2C1_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
+struct LCDI2C_UNIT* punitd4x20;
+struct LCDI2C_UNIT* punitd4x16;
+struct LCDI2C_UNIT* punitd2x16;
 
 /* USER CODE END PFP */
 
@@ -105,7 +111,7 @@ int main(void)
   MX_DMA_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-
+  DTW_counter_init();
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -121,6 +127,8 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
+    /* Instantiate each LCD unit with I2C, address, row, column */
+  
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -133,6 +141,8 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  osThreadId retThrd =  xLcdTaskCreate(0, 16);
+  if (retThrd == NULL) morse_trap(123);
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -165,10 +175,14 @@ void SystemClock_Config(void)
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
   /** Initializes the CPU, AHB and APB busses clocks 
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 168;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -177,12 +191,12 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
   {
     Error_Handler();
   }
@@ -282,9 +296,17 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-	struct LCDPARAMS* pu1;
-	pu1 = lcdInit(&hi2c1, (uint8_t)0x27, (uint8_t)4, (uint8_t)20);
-	if (pu1 == NULL) morse_trap(55);
+  punitd4x20 = xLcdTaskcreateunit(&hi2c1,0x27,4,20);
+  if (punitd4x20 == NULL) morse_trap(227);
+
+  punitd4x16 = xLcdTaskcreateunit(&hi2c1,0x26,4,16);
+  if (punitd4x16 == NULL) morse_trap(226);
+  
+  punitd2x16 = xLcdTaskcreateunit(&hi2c1,0x25,2,16);
+  if (punitd2x16 == NULL) morse_trap(225);
+
+
+  struct LCDPARAMS* pu1 = &punitd4x20->lcdparams;
     // Print text and home position 0,0
     lcdPrintStr(pu1,(uint8_t*)"1 Hello,", 8);
 
@@ -296,16 +318,15 @@ void StartDefaultTask(void *argument)
     // Set cursor at zero position of line 3
     lcdSetCursorPosition(pu1,0, 2);
     // Print text at cursor position
-    lcdPrintStr(pu1,(uint8_t*)"3 lcdic2X2 ", 10);
+    lcdPrintStr(pu1,(uint8_t*)"3 lcdic4X20", 10);
 
     // Set cursor at zero position of line 4
     lcdSetCursorPosition(pu1,0, 3);
     // Print text at cursor position
     lcdPrintStr(pu1,(uint8_t*)"4 abcdefghijklmnopqr", 20);
 
-      struct LCDPARAMS* pu2;
-  pu2 = lcdInit(&hi2c1, (uint8_t)0x26, (uint8_t)4, (uint8_t)16);
-  if (pu1 == NULL) morse_trap(55);
+
+  struct LCDPARAMS* pu2 = &punitd4x16->lcdparams;
     // Print text and home position 0,0
     lcdPrintStr(pu2,(uint8_t*)"1 Yes indeed,", 13);
 
@@ -317,17 +338,49 @@ void StartDefaultTask(void *argument)
     // Set cursor at zero position of line 3
     lcdSetCursorPosition(pu2,0, 2);
     // Print text at cursor position
-    lcdPrintStr(pu2,(uint8_t*)"3 lcdic2X16", 10);
+    lcdPrintStr(pu2,(uint8_t*)"3 lcdic4x16", 11);
 
     // Set cursor at zero position of line 4
     lcdSetCursorPosition(pu2,0, 3);
     // Print text at cursor position
     lcdPrintStr(pu2,(uint8_t*)"4 ijklmnopqrstuvwxyz", 20);
-    
 
+  struct LCDPARAMS* pu3 = &punitd2x16->lcdparams;
+lcdDisplayOn(pu3);
+
+    lcdSetCursorPosition(pu3, 0, 0);
+    lcdPrintStr(pu3,(uint8_t*)"12345678abcdefgh", 16);
+
+    // Set cursor at zero position of line 2
+    lcdSetCursorPosition(pu3, 0, 1);
+    lcdPrintStr(pu3,(uint8_t*)"12345678Q2345678", 16);
+
+    char buf[24];
+    int32_t ct = 0;
+    
     for (;;) {
 		HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_15); // BLUE LED
-      vTaskDelay(1000);
+      vTaskDelay(250);
+
+    lcdSetCursorPosition(pu3, 0, 0);
+    lcdPrintStr(pu3,(uint8_t*)"This is a test??", 16);
+
+    lcdSetCursorPosition(pu3, 0, 1);
+    sprintf (buf,"CT: %3d         ",ct++);
+    lcdPrintStr(pu3,(uint8_t*)buf, 16);
+
+    lcdSetCursorPosition(pu1, 0, 0);
+  lcdPrintStr(pu1,(uint8_t*)"1       ", 8);
+
+    lcdDisplayOff(pu3);
+
+    vTaskDelay(250);
+
+    lcdDisplayOn(pu3);
+
+    lcdSetCursorPosition(pu1, 0, 0);
+    lcdPrintStr(pu1,(uint8_t*)"1 Hello,", 8);
+
 
     }
   /* USER CODE END 5 */ 

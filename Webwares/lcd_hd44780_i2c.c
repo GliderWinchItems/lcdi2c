@@ -28,14 +28,13 @@
     uint8_t symSHi[8] = { 0x10, 0x15, 0x15, 0x15, 0x15, 0x1F, 0x03 }; // Щ
     uint8_t symJU[8]  = { 0x12, 0x15, 0x15, 0x1D, 0x15, 0x15, 0x12 }; // Ю
     uint8_t symJA[8]  = { 0x0F, 0x11, 0x11, 0x0F, 0x05, 0x09, 0x11 }; // Я
-
-
  */
 
 #include "stdlib.h"
 #include "string.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "LcdTask.h"
 #include "lcd_hd44780_i2c.h"
 #include "morse.h"
 
@@ -44,69 +43,28 @@ uint8_t lcdCommandBuffer[6] = {0x00};
 #ifdef OLDCODE
 static LCDParams lcdParams;
 #endif
-static struct LCDPARAMS lcdParams;
 
 static bool lcdWriteByte(struct LCDPARAMS* p1, uint8_t rsRwBits, uint8_t * data);
 
-static struct LCDPARAMS* phead = NULL;
-
 /**
  * @brief  Turn display on and init it params
- * @note   We gonna make init steps according to datasheep page 46.
- *         There are 4 steps to turn 4-bits mode on,
- *         then we send initial params.
- * @param  hi2c    I2C struct to which display is connected
- * @param  address Display I2C 7-bit address
- * @param  lines   Number of lines of display
- * @param  columns Number of colums
  * @return         true if success
  */
-struct LCDPARAMS* lcdInit(I2C_HandleTypeDef *hi2c, uint8_t address, uint8_t lines, uint8_t columns) 
+struct LCDPARAMS* lcdInit(struct LCDI2C_UNIT* punit)
 {
-	struct LCDPARAMS* p1 = phead;
-	struct LCDPARAMS* p2;
+	struct LCDPARAMS* p1 = &punit->lcdparams;
 
     TickType_t xLastWakeTime;
 
     uint8_t lcdData = LCD_BIT_5x8DOTS;
 
-	if (HAL_I2C_GetState(hi2c) != HAL_I2C_STATE_READY) return NULL;
-
-	/* Check if this LCD unit is already 'init'd. */
-	if (p1 == NULL)
-	{ // Here list is empty
-		// Add a struct to the list
-		p2 = (struct LCDPARAMS*)calloc(1, sizeof(struct LCDPARAMS));
-		if (p2 == NULL) morse_trap(45);
-		phead = p2;
-		p1 = p2;
-	}
-	else
-	{
-		while (p1->next != NULL) 
-		{
-			if ((p1->hi2c == hi2c) && ((p1->address >> 1) == address))
-			{ // Here, already on list
-				return p1;
-			}
-			p1= p1->next; // Step to next on list
-		}
-
-		p2 = (struct LCDPARAMS*)calloc(1, sizeof(struct LCDPARAMS));
-		if (p2 == NULL) morse_trap(46);
-		p1->next = p2;
-		p1 = p2;
-	}
-
-	 p1->hi2c      = hi2c;
-    p1->address   = address << 1;
-    p1->lines     = lines;
-    p1->columns   = columns;
     p1->backlight = LCD_BIT_BACKIGHT_ON;
 
     p1->lcdCommandBuffer[0] = LCD_BIT_E | (0x03 << 4);
     p1->lcdCommandBuffer[1] = p1->lcdCommandBuffer[0];
     p1->lcdCommandBuffer[2] = (0x03 << 4);
+
+    if (HAL_I2C_GetState(p1->hi2c) != HAL_I2C_STATE_READY) return NULL;
 
     /* First 3 steps of init cycles. They are the same. */
     for (uint8_t i = 0; i < 3; ++i) {
@@ -140,14 +98,16 @@ struct LCDPARAMS* lcdInit(I2C_HandleTypeDef *hi2c, uint8_t address, uint8_t line
     while (HAL_I2C_GetState(p1->hi2c) != HAL_I2C_STATE_READY) {
         vTaskDelay(1);
     }
-
+//osDelay(1);
     /* Lets set display params */
     /* First of all lets set display size */
-    lcdData |= LCD_MODE_4BITS;
+ //   lcdData |= LCD_MODE_4BITS;
 
-    if (p1->lines > 1) {
-        lcdData |= LCD_BIT_2LINE;
-    }
+ //   if (p1->lines > 1) {
+//        lcdData |= LCD_BIT_2LINE;
+//    }
+    lcdData = 0x2A;
+    vTaskDelay(10);
 
     lcdWriteByte(p1, (uint8_t)0x00, &lcdData);  // TODO: Make 5x10 dots font usable for some 1-line display
 
@@ -314,27 +274,31 @@ bool lcdSetCursorPosition(struct LCDPARAMS* p1, uint8_t column, uint8_t line) {
     // We will setup offsets for 4 lines maximum
     static const uint8_t lineOffsets[4]     = { 0x00, 0x40, 0x14, 0x54 };
     static const uint8_t lineOffsets4x16[4] = { 0x00, 0x40, 0x10, 0x50 };
-    static const uint8_t lineOffsets2x16[4] = { 0x00, 0x40, 0x14, 0x54 };
+    static const uint8_t lineOffsets2x16[4] = { 0x00, 0x40, 0x40, 0x40 };
 
-    uint8_t* plo = &lineOffsets[0];
 
-    if ( line >= p1->lines ) {
-        line = p1->lines - 1;
-    }
+    uint8_t* plo = (uint8_t*)&lineOffsets[0];
+
+ //   if ( line >= p1->lines ) {
+//        line = p1->lines - 1;
+//    }
 
     if (p1->lines == 4)
     {
         if (p1->columns == 16)
-            plo = &lineOffsets4x16[0];
+            plo = (uint8_t*)&lineOffsets4x16[0];
     }
     else
     {
         if (p1->lines == 2)
-            plo = &lineOffsets2x16[0];
+        {
+            plo = (uint8_t*)&lineOffsets2x16[0];
+        }
     }
     uint8_t lcdCommand = LCD_BIT_SETDDRAMADDR | (column + *(plo+line));
+    lcdWriteByte(p1, 0x00, &lcdCommand);
 
-    return lcdWriteByte(p1, 0x00, &lcdCommand);
+    return 0;
 }
 
 /**
@@ -402,19 +366,32 @@ bool lcdLoadCustomChar(struct LCDPARAMS* p1,uint8_t cell, uint8_t * charMap) {
  * @param  data     Pointer to byte to send
  * @return          true if success
  */
+static void oneWriteByte(struct LCDPARAMS* p1,uint8_t ct)
+{
+  if (HAL_I2C_Master_Transmit_DMA(p1->hi2c, p1->address, (uint8_t*)p1->lcdCommandBuffer, ct) != HAL_OK) {
+        return;
+    }
+
+    while (HAL_I2C_GetState(p1->hi2c) != HAL_I2C_STATE_READY) {
+        vTaskDelay(2);
+    }
+    return;    
+}
 static bool lcdWriteByte(struct LCDPARAMS* p1,uint8_t rsRwBits, uint8_t * data) {
 
     /* Higher 4 bits*/
     p1->lcdCommandBuffer[0] = rsRwBits | LCD_BIT_E | p1->backlight | (*data & 0xF0);  // Send data and set strobe
-    p1->lcdCommandBuffer[1] = lcdCommandBuffer[0];                                          // Strobe turned on
+    p1->lcdCommandBuffer[1] = p1->lcdCommandBuffer[0];                                          // Strobe turned on
     p1->lcdCommandBuffer[2] = rsRwBits | p1->backlight | (*data & 0xF0);              // Turning strobe off
-
+    p1->lcdCommandBuffer[3] = rsRwBits | p1->backlight | (*data & 0xF0);              // Turning strobe off
+//oneWriteByte(p1,4);
     /* Lower 4 bits*/
-    p1->lcdCommandBuffer[3] = rsRwBits | LCD_BIT_E | p1->backlight | ((*data << 4) & 0xF0);  // Send data and set strobe
-    p1->lcdCommandBuffer[4] = p1->lcdCommandBuffer[3];                                                 // Strobe turned on
-    p1->lcdCommandBuffer[5] = rsRwBits | p1->backlight | ((*data << 4) & 0xF0);              // Turning strobe off
-
-
+    p1->lcdCommandBuffer[4] = rsRwBits | LCD_BIT_E | p1->backlight | ((*data << 4) & 0xF0);  // Send data and set strobe
+    p1->lcdCommandBuffer[5] = p1->lcdCommandBuffer[4];                                                 // Strobe turned on
+    p1->lcdCommandBuffer[6] = rsRwBits | p1->backlight | ((*data << 4) & 0xF0);              // Turning strobe off
+    p1->lcdCommandBuffer[7] = rsRwBits | p1->backlight | ((*data << 4) & 0xF0);              // Turning strobe off
+oneWriteByte(p1,8);
+/*
     if (HAL_I2C_Master_Transmit_DMA(p1->hi2c, p1->address, (uint8_t*)p1->lcdCommandBuffer, 6) != HAL_OK) {
         return false;
     }
@@ -422,6 +399,7 @@ static bool lcdWriteByte(struct LCDPARAMS* p1,uint8_t rsRwBits, uint8_t * data) 
     while (HAL_I2C_GetState(p1->hi2c) != HAL_I2C_STATE_READY) {
         vTaskDelay(1);
     }
-
+    */
+//    oneWriteByte(p1,6);
     return true;
 }
