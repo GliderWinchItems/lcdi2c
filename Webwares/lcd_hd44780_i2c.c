@@ -40,10 +40,6 @@
 
 uint8_t lcdCommandBuffer[6] = {0x00};
 
-#ifdef OLDCODE
-static LCDParams lcdParams;
-#endif
-
 static bool lcdWriteByte(struct LCDPARAMS* p1, uint8_t rsRwBits, uint8_t * data);
 
 /**

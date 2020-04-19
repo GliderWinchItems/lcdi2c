@@ -68,7 +68,7 @@ struct LCDI2C_UNIT* xLcdTaskcreateunit(I2C_HandleTypeDef* phi2c,
 	struct LCDI2C_UNIT* punit;
 	struct LCDI2C_UNIT* ptmp;
 
-//taskENTER_CRITICAL();
+taskENTER_CRITICAL();
 	/* Check if this I2C bus & address (i.e. unit) is already present. */
 	punit = phdunit; // Get pointer to first item on list
 	if (punit == NULL)
@@ -117,13 +117,12 @@ struct LCDI2C_UNIT* xLcdTaskcreateunit(I2C_HandleTypeDef* phi2c,
 
 	punit->state = LCD_IDLE; // Start off in idle (after final intialization)
 
-//taskEXIT_CRITICAL();
+taskEXIT_CRITICAL();
 
 	/* Complete the initialization the LCD unit */ 
 	struct LCDPARAMS* tmp = lcdInit(punit);
-//	struct LCDPARAMS* tmp = lcdInit(plp->hi2c,plp->address,plp->numrows,plp->numcols);
 	if (tmp == NULL) morse_trap(237);
-//morse_trap(46);
+
 	return punit;
 }
 /* *************************************************************************
@@ -185,15 +184,34 @@ void StartLcdTask(void* argument)
 {
 	BaseType_t Qret;	// queue receive return
 
-	struct LCDTASK_LINEBUF* plb; // Copied item from queue
+#ifdef ORIGINALTIMEDELAYUNDEBUGGEDCODE
 	struct LCDTASK_LINEBUF* plbtmp;
-	struct LCDI2C_UNIT* punit;				
-	struct LCDI2C_UNIT* ptmp;
 	TickType_t ttx;
+	struct LCDI2C_UNIT* ptmp;
+#endif
 
+	struct LCDTASK_LINEBUF* plb; // Copied item from queue
+	struct LCDPARAMS* p1;
+while(1==1) osDelay(10);
   /* Infinite loop */
   for(;;)
   {
+	Qret = xQueueReceive( LcdTaskQHandle,&plb,portMAX_DELAY);
+	if ( (Qret == pdPASS) && (plb->punit != NULL) ) // JIC someone sent a bad one
+	{
+		// Point to parameters for this unit
+		p1 = &(plb->punit)->lcdparams;
+    
+    	// Set cursor row/column
+		lcdSetCursorPosition(p1,plb->colreq,plb->linereq);
+
+		// Send text 
+    	lcdPrintStr(p1,plb->pbuf, plb->size);
+
+
+	}
+
+  #ifdef ORIGINALTIMEDELAYUNDEBUGGEDCODE
 		osDelay(4); // Polling Q & timing states
 
 		do // new queued items in unit circular buffers.
@@ -287,6 +305,7 @@ void StartLcdTask(void* argument)
 			}	
 			punit = punit->pnext;
 		}
+#endif		
 	}
 }
 /* #######################################################################
