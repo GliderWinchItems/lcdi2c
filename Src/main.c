@@ -69,9 +69,7 @@ static void MX_I2C1_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-struct LCDI2C_UNIT* punitd4x20;
-struct LCDI2C_UNIT* punitd4x16;
-struct LCDI2C_UNIT* punitd2x16;
+
 
 /* USER CODE END PFP */
 
@@ -296,6 +294,8 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
+#ifdef ORIGINALINLINECODE
+  
   punitd4x20 = xLcdTaskcreateunit(&hi2c1,0x27,4,20);
   if (punitd4x20 == NULL) morse_trap(227);
 
@@ -304,7 +304,6 @@ void StartDefaultTask(void *argument)
   
   punitd2x16 = xLcdTaskcreateunit(&hi2c1,0x25,2,16);
   if (punitd2x16 == NULL) morse_trap(225);
-
 
   struct LCDPARAMS* pu1 = &punitd4x20->lcdparams;
     // Print text and home position 0,0
@@ -355,13 +354,17 @@ lcdDisplayOn(pu3);
     lcdSetCursorPosition(pu3, 0, 1);
     lcdPrintStr(pu3,(uint8_t*)"12345678Q2345678", 16);
 
-    char buf[24];
+     char buf[24];
     int32_t ct = 0;
+   
+  #endif
+
     
     for (;;) {
 		HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_15); // BLUE LED
       vTaskDelay(250);
 
+#ifdef ORIGINALINLINECODE
     lcdSetCursorPosition(pu3, 0, 0);
     lcdPrintStr(pu3,(uint8_t*)"This is a test??", 16);
 
@@ -380,7 +383,7 @@ lcdDisplayOn(pu3);
 
     lcdSetCursorPosition(pu1, 0, 0);
     lcdPrintStr(pu1,(uint8_t*)"1 Hello,", 8);
-
+#endif
 
     }
   /* USER CODE END 5 */ 
