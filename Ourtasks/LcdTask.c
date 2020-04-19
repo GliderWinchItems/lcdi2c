@@ -192,7 +192,7 @@ void StartLcdTask(void* argument)
 
 	struct LCDTASK_LINEBUF* plb; // Copied item from queue
 	struct LCDPARAMS* p1;
-while(1==1) osDelay(10);
+//while(1==1) osDelay(10);
   /* Infinite loop */
   for(;;)
   {
@@ -209,103 +209,6 @@ while(1==1) osDelay(10);
     	lcdPrintStr(p1,plb->pbuf, plb->size);
 
 
-	}
-
-  #ifdef ORIGINALTIMEDELAYUNDEBUGGEDCODE
-		osDelay(4); // Polling Q & timing states
-
-		do // new queued items in unit circular buffers.
-		{
-			Qret = xQueueReceive( LcdTaskQHandle,&plb,0);
-			if (Qret == pdPASS)
-			{ // Here we have a queued item
-				ptmp = plb->punit;  // Point to "unit" struct
-				*ptmp->ppadd = plb; // Add pointer to circular buffer
-				ptmp->ppadd += 1;    // Advance "add" pointer
-				if (ptmp->ppadd == ptmp->ppend) ptmp->ppadd = ptmp->ppbegin;
-
-				if (ptmp->state == LCD_IDLE)
-				{ // Here, this LCD unit is idle, so begin.
-					// Set cursor position
-					lcdSetCursorPosition(&ptmp->lcdparams, plb->colreq, plb->linereq);
-
-					// Get time to end delay after sending row/column
-    				ptmp->untiltickct = xTaskGetTickCount() + DELAY_SETRC; 
-    				ptmp->state = LCD_CHR; // Next state
-				}
-			}
-		} while (Qret == pdPASS);
-
-		/* Check for active units and timing of states. */
-		punit = phdunit;
-		while (punit != NULL)
-		{
-			ttx = xTaskGetTickCount();
-			plbtmp = *punit->pptake;
-			switch (punit->state)
-			{
-			case LCD_IDLE: // Waiting for app to load queue
-				if (punit->pptake != punit->ppadd)
-				{ // Here start a new buffer sequence
-					lcdSetCursorPosition(&punit->lcdparams, plb->colreq, plb->linereq);
-
-					// Get time to end delay after sending row/column
-	   				punit->untiltickct = ttx + DELAY_SETRC; 
-  					punit->state = LCD_CHR; // Next state
-				}
-				break;
-
-			case LCD_SETRC: // Waiting for set cursor
-				if ((int)(ttx - punit->untiltickct) >= 0)
-				{
-					plbtmp->pbuf += 1;
-   	    			lcdPrintStr(&punit->lcdparams,plbtmp->pbuf, 1);
-   					punit->untiltickct = ttx + DELAY_COL; 
-   					punit->state = LCD_CHR;
-				}
-				break;
-
-			case LCD_CHR:
-				// Wait for time expiration after sending a display char
-				if ((int)(ttx - punit->untiltickct) >= 0)
-				{
-					plbtmp->pbuf += 1;
-					plbtmp->size -= 1;
-					if (plbtmp->size > 0)
-					{ // Continue sending
-   	    				lcdPrintStr(&punit->lcdparams,plbtmp->pbuf, 1);
-    					punit->untiltickct = ttx + DELAY_CHR; 
-   	    			}
-   	    			else
-   	    			{ // Here, buffer has been sent (or last char is sending)
-
-						// Release buffer just sent so it can be reused. 
-						xSemaphoreGive( plbtmp->semaphore );
-
-   	    				// Advance ptr to circular buffer of ptrs
-   	    				punit->pptake += 1;
-   	    				if (punit->pptake == punit->ppend) 
-   	    					punit->pptake = punit->ppbegin;
-
-   	    				// Any more buffers waiting?
-   	    				if (punit->pptake == punit->ppadd)
-   	    				{ // No. We are done!
-   	    					punit->state = LCD_IDLE;	
-   	    				}
-   	    				else
-   	    				{ // Start next buffer
-							lcdSetCursorPosition(&punit->lcdparams, plb->colreq, plb->linereq);
-
-   							punit->untiltickct = ttx + DELAY_SETRC; 
-   							punit->state = LCD_CHR;
-   	    				}    	    				
-   	    			}
-				}
-				break;
-			}	
-			punit = punit->pnext;
-		}
-#endif		
 	}
 }
 /* #######################################################################
