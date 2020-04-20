@@ -18,11 +18,15 @@
 #include "LcdTask.h"
 #include "lcd_hd44780_i2c.h"
 #include "morse.h"
+#include "LcdmsgsTask.h"
 //#include "yprintf.h
 
-struct LCDI2C_UNIT* punitd4x20;
-struct LCDI2C_UNIT* punitd4x16;
-struct LCDI2C_UNIT* punitd2x16;
+struct LCDI2C_UNIT* punitd4x20 = NULL;
+struct LCDI2C_UNIT* punitd4x16 = NULL;
+struct LCDI2C_UNIT* punitd2x16 = NULL;
+
+volatile uint8_t LcdTaskflag = 0;
+
 extern I2C_HandleTypeDef hi2c1;
 
 //osSemaphoreId vsnprintfSemaphoreHandle;
@@ -45,11 +49,11 @@ enum LCD_STATE
 #define DELAY_CHR 1; // Delay following each char
 #define DELAY_SETRC 20; // Delay following set cursor row column
 
-osThreadId LcdTaskHandle = NULL;
+TaskHandle_t LcdTaskHandle = NULL;
 
 /* Queue */
 #define QUEUESIZE 32	// Total size of bcb's other tasks can queue up
-osMessageQId LcdTaskQHandle;
+QueueHandle_t LcdTaskQHandle;
 
 /* Linked list head. */
 static struct LCDI2C_UNIT* phdunit = NULL;   // Units instantiated; last = NULL
@@ -131,13 +135,13 @@ taskEXIT_CRITICAL();
 	return punit;
 }
 /* *************************************************************************
- * struct LCDTASK_LINEBUF* xLcdTaskintgetbuf(struct LCDI2C_UNIT* p);
- * @brief	: Get a buffer for a LCD on I2C peripheral, and address
- * @param	: phi2c = pointer to I2C handle
- * @param	: address = I2C bus address
+ * struct LCDTASK_LINEBUF* xLcdTaskintgetbuf(struct LCDI2C_UNIT* p, uint8_t bufmax);
+ * @brief	: Get a buffer for a LCD unit
+ * @param	: p = pointer to LCD unit struct (unit = I2C bus w address on bus)
+ * @param   : bufmax = size of buffer allocated
  * @return	: NULL = fail, otherwise pointer to buffer struct
  * *************************************************************************/
-struct LCDTASK_LINEBUF* xLcdTaskintgetbuf(struct LCDI2C_UNIT* p)
+struct LCDTASK_LINEBUF* xLcdTaskintgetbuf(struct LCDI2C_UNIT* p, uint8_t bufmax)
 {
 	struct LCDTASK_LINEBUF* plb = NULL;
 	struct LCDI2C_UNIT* punit;
@@ -185,115 +189,118 @@ taskEXIT_CRITICAL();
  * void StartLcdTask(void const * argument);
  *	@brief	: Task startup
  * *************************************************************************/
+static const uint8_t line1[20] = "1 123456789.........";
+static const uint8_t line2[20] = "2 .........123456789";
+static const uint8_t line3[20] = "3 abcdefgjhiklmnopqr";
+static const uint8_t line4[20] = "4 ABCDEFGHIJKLMNOPQR";
 void StartLcdTask(void* argument)
 {
-	BaseType_t Qret;	// queue receive return
-
-#ifdef ORIGINALTIMEDELAYUNDEBUGGEDCODE
-	struct LCDTASK_LINEBUF* plbtmp;
-	TickType_t ttx;
-#endif
-
+	BaseType_t Qret = 1;	// queue receive return
 	struct LCDTASK_LINEBUF* plb; // Copied item from queue
 	struct LCDPARAMS* p1;
 	struct LCDI2C_UNIT* ptmp;
-	  punitd4x20 = xLcdTaskcreateunit(&hi2c1,0x27,4,20);
-  if (punitd4x20 == NULL) morse_trap(227);
 
-  punitd4x16 = xLcdTaskcreateunit(&hi2c1,0x26,4,16);
-  if (punitd4x16 == NULL) morse_trap(226);
+	/* Instantiate each LCD display unit. 
+	   Arguments:
+	     I2C bus handle
+	     Address of unit on I2C bus
+	     Number of rows (lines)
+	     Number of columns
+	*/
+	punitd4x20 = xLcdTaskcreateunit(&hi2c1,0x27,4,20);
+  	if (punitd4x20 == NULL) morse_trap(227);
+
+  	punitd4x16 = xLcdTaskcreateunit(&hi2c1,0x26,4,16);
+  	if (punitd4x16 == NULL) morse_trap(226);
   
-  punitd2x16 = xLcdTaskcreateunit(&hi2c1,0x25,2,16);
-  if (punitd2x16 == NULL) morse_trap(225);
+  	punitd2x16 = xLcdTaskcreateunit(&hi2c1,0x25,2,16);
+  	if (punitd2x16 == NULL) morse_trap(225);
 
+
+  	/* Some test messages. */
+#define DDD (pdMS_TO_TICKS(200)) // osDelay
   struct LCDPARAMS* pu1 = &punitd4x20->lcdparams;
-    // Print text and home position 0,0
-    lcdPrintStr(pu1,(uint8_t*)"1 Hello,", 8);
+    lcdSetCursorPosition(pu1,0, 0);
+    lcdPrintStr(pu1,(uint8_t*)line1,20); osDelay(DDD);
 
-    // Set cursor at zero position of line 2
     lcdSetCursorPosition(pu1,0, 1);
-    // Print text at cursor position
-    lcdPrintStr(pu1,(uint8_t*)"2 GWIlcd ", 9);
+    lcdPrintStr(pu1,(uint8_t*)line2,20); osDelay(DDD);
 
-    // Set cursor at zero position of line 3
     lcdSetCursorPosition(pu1,0, 2);
-    // Print text at cursor position
-    lcdPrintStr(pu1,(uint8_t*)"3 lcdic4X20", 10);
+    lcdPrintStr(pu1,(uint8_t*)line3,20); osDelay(DDD);
 
-    // Set cursor at zero position of line 4
     lcdSetCursorPosition(pu1,0, 3);
-    // Print text at cursor position
-    lcdPrintStr(pu1,(uint8_t*)"4 abcdefghijklmnopqr", 20);
+    lcdPrintStr(pu1,(uint8_t*)line4,20); osDelay(DDD);
 
+    osDelay(pdMS_TO_TICKS(300));
 
   struct LCDPARAMS* pu2 = &punitd4x16->lcdparams;
-    // Print text and home position 0,0
-    lcdPrintStr(pu2,(uint8_t*)"1 Yes indeed,", 13);
+    lcdSetCursorPosition(pu2,0, 0);
+    lcdPrintStr(pu2,(uint8_t*)line1,16); osDelay(DDD);
 
-    // Set cursor at zero position of line 2
     lcdSetCursorPosition(pu2,0, 1);
-    // Print text at cursor position
-    lcdPrintStr(pu2,(uint8_t*)"2 Yellow ", 9);
+    lcdPrintStr(pu2,(uint8_t*)line2,16); osDelay(DDD);
 
-    // Set cursor at zero position of line 3
     lcdSetCursorPosition(pu2,0, 2);
-    // Print text at cursor position
-    lcdPrintStr(pu2,(uint8_t*)"3 lcdic4x16", 11);
+    lcdPrintStr(pu2,(uint8_t*)line3,16); osDelay(DDD);
 
-    // Set cursor at zero position of line 4
     lcdSetCursorPosition(pu2,0, 3);
-    // Print text at cursor position
-    lcdPrintStr(pu2,(uint8_t*)"4 ijklmnopqrstuvwxyz", 20);
+    lcdPrintStr(pu2,(uint8_t*)line4,16); osDelay(DDD);
+
+    osDelay(pdMS_TO_TICKS(250));
+
 
   struct LCDPARAMS* pu3 = &punitd2x16->lcdparams;
-lcdDisplayOn(pu3);
 
-    lcdSetCursorPosition(pu3, 0, 0);
-    lcdPrintStr(pu3,(uint8_t*)"12345678abcdefgh", 16);
+    lcdSetCursorPosition(pu3,0, 0);
+    lcdPrintStr(pu3,(uint8_t*)line1,16); osDelay(DDD);
 
-    // Set cursor at zero position of line 2
-    lcdSetCursorPosition(pu3, 0, 1);
-    lcdPrintStr(pu3,(uint8_t*)"12345678Q2345678", 16);
+    lcdSetCursorPosition(pu3,0, 1);
+    lcdPrintStr(pu3,(uint8_t*)line2,16); osDelay(DDD);
 
-//while(1==1) osDelay(100);
+    //osDelay(250);
 
-//osDelay(8000); morse_trap(77);
+ osDelay(pdMS_TO_TICKS(2000));
+ 
+ // Clear all lines 
+ uint32_t i;
+ for (i = 0; i < 4; i++){ lcdSetCursorPosition(pu1,0, i);
+  lcdPrintStr(pu1,(uint8_t*)"                    ",20);}
+
+for (i = 0; i < 4; i++){ lcdSetCursorPosition(pu2,0, i);
+  lcdPrintStr(pu2,(uint8_t*)"                ",16);}
+   
+for (i = 0; i < 2; i++){ lcdSetCursorPosition(pu3,0, i);
+  lcdPrintStr(pu3,(uint8_t*)"                ",16);}
+
+    /* Let LcdmsgsTask know that we are ready accept msgs. */
+    LcdTaskflag = 1;
 
   /* Infinite loop */
   for(;;)
   {
+ if (LcdTaskQHandle == NULL) morse_trap(229); // JIC debugging
+
 	Qret = xQueueReceive( LcdTaskQHandle,&plb,portMAX_DELAY);
 	if (Qret == pdPASS)
-	{
+	{ // Here, OK item from queue
+HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_13); // Orange
 		// Point to parameters for this unit
 		ptmp = plb->punit;
-		if (ptmp != NULL)
+		if (ptmp != NULL) // JIC
 		{
-
+			// Get LCDPARAMS pointer from lcd unit block
 			p1 = &ptmp->lcdparams;
     
-    	// Set cursor row/column
-//		lcdSetCursorPosition(p1,plb->colreq,plb->linereq);
+    		// Set cursor row/column for this hunit
+			lcdSetCursorPosition(p1,plb->colreq,plb->linereq);
 
-		// Send text 
-//    	lcdPrintStr(p1,plb->pbuf, plb->size);
+			// Send the glorious text of liberation! (Or, at least some ASCII)
+  			lcdPrintStr(p1,plb->pbuf, plb->size);
 		}
 	}
   }
 }
-/* #######################################################################
-   I2C interrupt callback: file|size has been sent
-   ####################################################################### */
-#ifdef HALCALLBACKUSE
-void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
-{
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	
-    if (HAL_I2C_Master_Transmit_IT(p2->hi2c, p2->address, (uint8_t*)p2->lcdCommandBuffer, 6) != HAL_OK) 
-		portYIELD_FROM_ISR( xHigherPriorityTaskWoken );
-	return;
-}
-#endif
 /* *************************************************************************
  * osThreadId xLcdTaskCreate(uint32_t taskpriority, uint16_t numbcb);
  * @brief	: Create task; task handle created is global for all to enjoy!
@@ -311,11 +318,8 @@ void *pvParameters,
 UBaseType_t uxPriority,
 TaskHandle_t *pxCreatedTask );
 */
-	BaseType_t ret = xTaskCreate(&StartLcdTask,"LcdI2CTask",256,NULL,taskpriority,NULL);
+	BaseType_t ret = xTaskCreate(&StartLcdTask,"LcdI2CTask",256,NULL,taskpriority,&LcdTaskHandle);
 	if (ret != pdPASS) morse_trap(35);//return NULL;
-
-LcdTaskHandle = (osThreadId*)1;
-//if (LcdTaskHandle == NULL) morse_trap(36);
 
 	LcdTaskQHandle = xQueueCreate(numbcb, sizeof(struct LCDTASK_LINEBUF*) );
 	if (LcdTaskQHandle == NULL) morse_trap(37);//return NULL;

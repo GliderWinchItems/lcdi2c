@@ -60,8 +60,8 @@ osThreadId xLcdTaskCreate(uint32_t taskpriority, uint16_t numbcb);
  * @return	: LcdTaskHandle
  * *************************************************************************/
 struct LCDI2C_UNIT* xLcdTaskcreateunit(I2C_HandleTypeDef* phi2c, 
-    uint8_t address, 
-    uint8_t numrow, 
+    uint8_t address,
+    uint8_t numrow,
     uint8_t numcol);
 /*	@brief	: Instantiate a LCD unit on I2C peripheral and address
  * @param	: phi2c = pointer to I2C handle
@@ -70,12 +70,12 @@ struct LCDI2C_UNIT* xLcdTaskcreateunit(I2C_HandleTypeDef* phi2c,
  * @param	: numcol = number of LCD columns
  * @return	: NULL = fail, otherwise pointer to unit on linked list
  * *************************************************************************/
-struct LCDTASK_LINEBUF* xLcdTaskintgetbuf(struct LCDI2C_UNIT* p);
-/* @brief	: Get a buffer for a LCD on I2C peripheral, and address
- * @param	: phi2c = pointer to I2C handle
- * @param	: address = I2C bus address
- * @return	: NULL = fail, otherwise pointer to buffer struct
- * *************************************************************************/
+ struct LCDTASK_LINEBUF* xLcdTaskintgetbuf(struct LCDI2C_UNIT* p, uint8_t bufmax);
+ /* @brief	: Get a buffer for a LCD unit
+  * @param	: p = pointer to LCD unit struct (unit = I2C bus w address on bus)
+  * @param   : bufmax = size of buffer allocated
+  * @return	: NULL = fail, otherwise pointer to buffer struct
+  * *************************************************************************/
 int lcdi2cprintf(struct LCDTASK_LINEBUF** pplb, int row, int col, const char *fmt, ...);
 /* @brief	: 'printf' for uarts
  * @param	: pblb = pointer to pointer to line buff struct
@@ -93,7 +93,13 @@ int lcdi2cputs(struct LCDTASK_LINEBUF** pplb, int row, int col, char* pchr);
  * @return	: Number of chars sent
  * ************************************************************************************** */
 
-extern osMessageQId LcdTaskQHandle;
-extern osThreadId   LcdTaskHandle;
+extern QueueHandle_t LcdTaskQHandle;
+extern TaskHandle_t   LcdTaskHandle;
+
+extern struct LCDI2C_UNIT* punitd4x20;
+extern struct LCDI2C_UNIT* punitd4x16;
+extern struct LCDI2C_UNIT* punitd2x16;
+
+extern volatile uint8_t LcdTaskflag;
 
 #endif

@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include "LcdTask.h"
 #include "lcd_hd44780_i2c.h"
+#include "LcdmsgsTask.h"
 #include "morse.h"
 #include "DTW_counter.h"
 /* USER CODE END Includes */
@@ -58,6 +59,8 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4
 };
 /* USER CODE BEGIN PV */
+
+uint32_t  loopct;
 
 /* USER CODE END PV */
 
@@ -141,6 +144,10 @@ int main(void)
   /* add threads, ... */
   osThreadId retThrd =  xLcdTaskCreate(0, 16);
   if (retThrd == NULL) morse_trap(123);
+
+  retThrd= xLcdmsgsTaskCreate(0, 32);
+  if (retThrd == NULL) morse_trap(124);
+
   /* USER CODE END RTOS_THREADS */
 
   /* Start scheduler */
@@ -294,96 +301,20 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-#ifdef ORIGINALINLINECODE
-  
-  punitd4x20 = xLcdTaskcreateunit(&hi2c1,0x27,4,20);
-  if (punitd4x20 == NULL) morse_trap(227);
 
-  punitd4x16 = xLcdTaskcreateunit(&hi2c1,0x26,4,16);
-  if (punitd4x16 == NULL) morse_trap(226);
-  
-  punitd2x16 = xLcdTaskcreateunit(&hi2c1,0x25,2,16);
-  if (punitd2x16 == NULL) morse_trap(225);
+  struct LCDMSGTASK_MSGREQ lcd4_msg0;
+    lcd4_msg0.msgnum = 0;
+    lcd4_msg0.row    = 0;
+    lcd4_msg0.col    = 0;
 
-  struct LCDPARAMS* pu1 = &punitd4x20->lcdparams;
-    // Print text and home position 0,0
-    lcdPrintStr(pu1,(uint8_t*)"1 Hello,", 8);
-
-    // Set cursor at zero position of line 2
-    lcdSetCursorPosition(pu1,0, 1);
-    // Print text at cursor position
-    lcdPrintStr(pu1,(uint8_t*)"2 GWIlcd ", 9);
-
-    // Set cursor at zero position of line 3
-    lcdSetCursorPosition(pu1,0, 2);
-    // Print text at cursor position
-    lcdPrintStr(pu1,(uint8_t*)"3 lcdic4X20", 10);
-
-    // Set cursor at zero position of line 4
-    lcdSetCursorPosition(pu1,0, 3);
-    // Print text at cursor position
-    lcdPrintStr(pu1,(uint8_t*)"4 abcdefghijklmnopqr", 20);
-
-
-  struct LCDPARAMS* pu2 = &punitd4x16->lcdparams;
-    // Print text and home position 0,0
-    lcdPrintStr(pu2,(uint8_t*)"1 Yes indeed,", 13);
-
-    // Set cursor at zero position of line 2
-    lcdSetCursorPosition(pu2,0, 1);
-    // Print text at cursor position
-    lcdPrintStr(pu2,(uint8_t*)"2 Yellow ", 9);
-
-    // Set cursor at zero position of line 3
-    lcdSetCursorPosition(pu2,0, 2);
-    // Print text at cursor position
-    lcdPrintStr(pu2,(uint8_t*)"3 lcdic4x16", 11);
-
-    // Set cursor at zero position of line 4
-    lcdSetCursorPosition(pu2,0, 3);
-    // Print text at cursor position
-    lcdPrintStr(pu2,(uint8_t*)"4 ijklmnopqrstuvwxyz", 20);
-
-  struct LCDPARAMS* pu3 = &punitd2x16->lcdparams;
-lcdDisplayOn(pu3);
-
-    lcdSetCursorPosition(pu3, 0, 0);
-    lcdPrintStr(pu3,(uint8_t*)"12345678abcdefgh", 16);
-
-    // Set cursor at zero position of line 2
-    lcdSetCursorPosition(pu3, 0, 1);
-    lcdPrintStr(pu3,(uint8_t*)"12345678Q2345678", 16);
-
-     char buf[24];
-    int32_t ct = 0;
-   
-  #endif
-
-    
     for (;;) {
+
 		HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_15); // BLUE LED
-      vTaskDelay(250);
+      vTaskDelay(1000);
 
-#ifdef ORIGINALINLINECODE
-    lcdSetCursorPosition(pu3, 0, 0);
-    lcdPrintStr(pu3,(uint8_t*)"This is a test??", 16);
+    loopct += 1; // Counter for display test purposes
 
-    lcdSetCursorPosition(pu3, 0, 1);
-    sprintf (buf,"CT: %3d         ",ct++);
-    lcdPrintStr(pu3,(uint8_t*)buf, 16);
-
-    lcdSetCursorPosition(pu1, 0, 0);
-  lcdPrintStr(pu1,(uint8_t*)"1       ", 8);
-
-    lcdDisplayOff(pu3);
-
-    vTaskDelay(250);
-
-    lcdDisplayOn(pu3);
-
-    lcdSetCursorPosition(pu1, 0, 0);
-    lcdPrintStr(pu1,(uint8_t*)"1 Hello,", 8);
-#endif
+      xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4_msg0, 0);
 
     }
   /* USER CODE END 5 */ 

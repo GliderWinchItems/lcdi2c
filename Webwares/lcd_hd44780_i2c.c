@@ -362,6 +362,7 @@ bool lcdLoadCustomChar(struct LCDPARAMS* p1,uint8_t cell, uint8_t * charMap) {
  * @param  data     Pointer to byte to send
  * @return          true if success
  */
+/*
 static void oneWriteByte(struct LCDPARAMS* p1,uint8_t ct)
 {
   if (HAL_I2C_Master_Transmit_DMA(p1->hi2c, p1->address, (uint8_t*)p1->lcdCommandBuffer, ct) != HAL_OK) {
@@ -373,6 +374,7 @@ static void oneWriteByte(struct LCDPARAMS* p1,uint8_t ct)
     }
     return;    
 }
+*/
 static bool lcdWriteByte(struct LCDPARAMS* p1,uint8_t rsRwBits, uint8_t * data) {
 
     /* Higher 4 bits*/
@@ -386,16 +388,15 @@ static bool lcdWriteByte(struct LCDPARAMS* p1,uint8_t rsRwBits, uint8_t * data) 
     p1->lcdCommandBuffer[5] = p1->lcdCommandBuffer[4];                                                 // Strobe turned on
     p1->lcdCommandBuffer[6] = rsRwBits | p1->backlight | ((*data << 4) & 0xF0);              // Turning strobe off
     p1->lcdCommandBuffer[7] = rsRwBits | p1->backlight | ((*data << 4) & 0xF0);              // Turning strobe off
-oneWriteByte(p1,8);
-/*
-    if (HAL_I2C_Master_Transmit_DMA(p1->hi2c, p1->address, (uint8_t*)p1->lcdCommandBuffer, 6) != HAL_OK) {
+//oneWriteByte(p1,8);
+
+    if (HAL_I2C_Master_Transmit_DMA(p1->hi2c, p1->address, (uint8_t*)p1->lcdCommandBuffer, 8) != HAL_OK) {
         return false;
     }
 
     while (HAL_I2C_GetState(p1->hi2c) != HAL_I2C_STATE_READY) {
         vTaskDelay(1);
     }
-    */
-//    oneWriteByte(p1,6);
+    
     return true;
 }
