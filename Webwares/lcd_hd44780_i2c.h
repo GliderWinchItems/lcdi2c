@@ -96,37 +96,6 @@ typedef enum {
 } bool;
 #endif
 
-#ifdef OLDCODE
-typedef struct {
-    I2C_HandleTypeDef * hi2c;  // I2C Struct
-    uint8_t lines;             // Lines of the display
-    uint8_t columns;           // Columns
-    uint8_t address;           // I2C address shifted left by 1
-    uint8_t backlight;         // Backlight
-    uint8_t modeBits;          // Display on/off control bits
-    uint8_t entryBits;         // Entry mode set bits
-} LCDParams;
-#endif
-
-typedef struct LCDI2C_UNIT p;
-typedef struct LCDPARAMS lcdparams;
-
-struct LCDPARAMS 
-{
-    struct LCDPARAMS* next; // Linked list
-    I2C_HandleTypeDef * hi2c;  // I2C Struct
-    uint8_t lines;             // Lines of the display
-    uint8_t columns;           // Columns
-    uint8_t address;           // I2C address shifted left by 1
-    uint8_t backlight;         // Backlight
-    uint8_t modeBits;          // Display on/off control bits
-    uint8_t entryBits;         // Entry mode set bits
- 	uint8_t lcdCommandBuffer[8];
-    uint8_t numrows;  // Number of rows (lines) for this LCD unit
-    uint8_t numcols;  // Number of columns for this LCD unit
-
-};
-
 typedef enum {
     LCD_PARAM_UNSET = 0,
     LCD_PARAM_SET

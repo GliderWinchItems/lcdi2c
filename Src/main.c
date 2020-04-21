@@ -56,7 +56,7 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128 * 4
+  .stack_size = 384 * 4
 };
 /* USER CODE BEGIN PV */
 
@@ -307,14 +307,30 @@ void StartDefaultTask(void *argument)
     lcd4_msg0.row    = 0;
     lcd4_msg0.col    = 0;
 
+ struct LCDMSGTASK_MSGREQ lcd4_msg1;
+    lcd4_msg1.msgnum = 1;
+    lcd4_msg1.row    = 1;
+    lcd4_msg1.col    = 0;
+
+ struct LCDMSGTASK_MSGREQ lcd4_msg2;
+    lcd4_msg2.msgnum = 2;
+    lcd4_msg2.row    = 3;
+    lcd4_msg2.col    = 0;
+
+    while(LcdTaskflag == 0) osDelay(10);
+    while(LcdmsgsTaskflag == 0) osDelay(10);
+
     for (;;) {
 
 		HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_15); // BLUE LED
       vTaskDelay(1000);
 
     loopct += 1; // Counter for display test purposes
+    lcd4_msg0.var.f = loopct * 0.1;
 
-      xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4_msg0, 0);
+    xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4_msg0, 0);
+    xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4_msg1, 0);
+    xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4_msg2, 0);
 
     }
   /* USER CODE END 5 */ 
@@ -349,7 +365,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-
+  morse_trap(15);
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -366,6 +382,7 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
      tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  morse_trap(16);
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

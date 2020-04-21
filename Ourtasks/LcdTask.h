@@ -12,12 +12,6 @@
 #include "cmsis_os.h"
 #include "stm32f4xx_hal.h"
 #include "semphr.h"
-#include "lcd_hd44780_i2c.h"
-
-#define LCDCIRPTRSIZE 8	// Size of LCD circular buffer of pointers
-
-typedef struct LCDI2C_UNIT punit; // Avoid circular definition error
-typedef struct LCDPARAMS lcdparams;
 
 /* I2C Line buffer */
 struct LCDTASK_LINEBUF
@@ -31,21 +25,29 @@ struct LCDTASK_LINEBUF
     uint8_t colreq;             // Column number requested(0 - n)
 };
 
+struct LCDPARAMS 
+{
+    I2C_HandleTypeDef * hi2c;  // I2C Struct
+    uint8_t lines;             // Lines of the display
+    uint8_t columns;           // Columns
+    uint8_t address;           // I2C address =>shifted<= left by 1
+    uint8_t backlight;         // Backlight
+    uint8_t modeBits;          // Display on/off control bits
+    uint8_t entryBits;         // Entry mode set bits
+ 	uint8_t lcdCommandBuffer[8];
+    uint8_t numrows;  // Number of rows (lines) for this LCD unit
+    uint8_t numcols;  // Number of columns for this LCD unit
+
+};
 
 /* Linked list of entries for each I2C:address (i.e. LCD units) */
 struct LCDI2C_UNIT
 {
 	struct LCDI2C_UNIT* pnext; // Next bus unit on this I2C bus
 	I2C_HandleTypeDef* phi2c;  // HAL I2C Handle for this bus
-	struct LCDTASK_LINEBUF** ppbegin; // Pointer to circular buffer of line buffer pointers
-	struct LCDTASK_LINEBUF** ppend;   // Pointer to circular buffer of line buffer pointers
-	struct LCDTASK_LINEBUF** ppadd;   // Pointer to circular buffer of line buffer pointers
-	struct LCDTASK_LINEBUF** pptake;  // Pointer to circular buffer of line buffer pointers
-	struct LCDTASK_LINEBUF* pcb[LCDCIRPTRSIZE];
-
 	struct LCDPARAMS lcdparams;
 	TickType_t untiltickct; // Tickcount for the end of a delay
-	uint8_t address;  // Not-shifted address
+	uint8_t address;  // =>Not-shifted<= address
 	uint8_t state;    // State machine
 };
 

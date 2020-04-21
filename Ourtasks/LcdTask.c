@@ -109,15 +109,8 @@ taskENTER_CRITICAL();
 	punit->phi2c   = phi2c;   // HAL I2C Handle for this bus
 	punit->address = address; // I2C bus address (not shifted)
 
-	/* Set start, end, and working pointers for circular buffer of pointers. */
-	punit->ppbegin = &punit->pcb[0];
-	punit->ppadd   = &punit->pcb[0];
-	punit->pptake  = &punit->pcb[0];
-	punit->ppend   = &punit->pcb[LCDCIRPTRSIZE];
-
 	/* The remainder of LCDPARAMS will be initialized in the lcdInit() below. */
 	punit->lcdparams.hi2c     = phi2c;
-	punit->lcdparams.next     = (struct LCDPARAMS*)0xdeaddead;
 	punit->lcdparams.numrows  = numrow;  // number of LCD rows
 	punit->lcdparams.numcols  = numcol;  // number of LCD columns
 	punit->lcdparams.address  = address << 1; // Shifted address
@@ -170,7 +163,7 @@ taskENTER_CRITICAL();
 			if (plb->pbuf == NULL) morse_trap(236);
 
 			// Create buffer semaphore
-			plb->semaphore = xSemaphoreCreateBinary(); // Semaphore for this buffer
+			plb->semaphore = xSemaphoreCreateMutex(); // Semaphore for this buffer
 			if (plb->semaphore == NULL) morse_trap(234);
 			xSemaphoreGive(plb->semaphore); // Initialize
 
@@ -218,7 +211,7 @@ void StartLcdTask(void* argument)
 
 
   	/* Some test messages. */
-#define DDD (pdMS_TO_TICKS(200)) // osDelay
+#define DDD (pdMS_TO_TICKS(10)) // osDelay
   struct LCDPARAMS* pu1 = &punitd4x20->lcdparams;
     lcdSetCursorPosition(pu1,0, 0);
     lcdPrintStr(pu1,(uint8_t*)line1,20); osDelay(DDD);
@@ -318,14 +311,14 @@ void *pvParameters,
 UBaseType_t uxPriority,
 TaskHandle_t *pxCreatedTask );
 */
-	BaseType_t ret = xTaskCreate(&StartLcdTask,"LcdI2CTask",256,NULL,taskpriority,&LcdTaskHandle);
+	BaseType_t ret = xTaskCreate(&StartLcdTask,"LcdI2CTask",512,NULL,taskpriority,&LcdTaskHandle);
 	if (ret != pdPASS) morse_trap(35);//return NULL;
 
 	LcdTaskQHandle = xQueueCreate(numbcb, sizeof(struct LCDTASK_LINEBUF*) );
 	if (LcdTaskQHandle == NULL) morse_trap(37);//return NULL;
 
 #ifdef NOYPRINTFISPRESENT
-	vsnprintfSemaphoreHandle = xSemaphoreCreateBinary(); // Semaphore for this buffer
+	vsnprintfSemaphoreHandle = xSemaphoreCreateMutex(); // Semaphore for this buffer
 	if (vsnprintfSemaphoreHandle == NULL) morse_trap(38);
 #endif
 
@@ -357,7 +350,7 @@ int lcdi2cprintf(struct LCDTASK_LINEBUF** pplb, int row, int col, const char *fm
 
 	/* Block if this buffer is not available. SerialSendTask will 'give' the semaphore 
       when the buffer has been sent. */
-	xSemaphoreTake(plb->semaphore, 6001);
+//	xSemaphoreTake(plb->semaphore, 5000);
 
 	plb->linereq   = row;
 	plb->colreq = col;

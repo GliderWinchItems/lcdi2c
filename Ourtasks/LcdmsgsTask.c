@@ -21,6 +21,7 @@
 
 TaskHandle_t LcdmsgsTaskHandle = NULL;
 QueueHandle_t LcdmsgsTaskQHandle;
+volatile uint16_t LcdmsgsTaskflag; // 0 = routine not ready; 1 = ready
 
 /* *************************************************************************
  * void StartLcdTask(void const * argument);
@@ -35,9 +36,8 @@ void StartLcdmsgsTask(void* argument)
 	uint8_t row;
 	uint8_t col;
 
-
 	/* Wait for LcdTask to complete the initialization and test display. */
-	while(LcdTaskflag == 0);
+	while(LcdTaskflag == 0) osDelay(10);
 
 /*
  * struct LCDTASK_LINEBUF* xLcdTaskintgetbuf(struct LCDI2C_UNIT* p);
@@ -58,6 +58,11 @@ void StartLcdmsgsTask(void* argument)
 	if (pu03 == NULL) morse_trap(753);
 	if (pu04 == NULL) morse_trap(754);
 
+	/* Let other's know msging is ready. */
+	LcdmsgsTaskflag = 1;
+
+//while(1==1) osDelay(10);
+
 	for ( ;; )
 	{
 		Qret = xQueueReceive(LcdmsgsTaskQHandle,&msgreq,portMAX_DELAY);
@@ -77,22 +82,39 @@ void StartLcdmsgsTask(void* argument)
 					{
 						case 0: // Unit #0 Message #1
 HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_14); // Red
-							pu01->linereq = row;   pu01->colreq  = col;
-							strncpy((char*)pu01->pbuf,"Happiness!          ",20);
-							pu01->size = 20;
+							lcdi2cprintf(&pu01,row,col,"1 loopct: %0.1f ",msgreq.var.f);
 							xQueueSendToBack(LcdTaskQHandle, &pu01, 0);
 						    break;
 
 						case 1: // Unit #0 Message #2
 							pu02->linereq = row;   pu02->colreq  = col;
-							strncpy((char*)pu02->pbuf,"Is for this to work ",20);
+							strncpy((char*)pu02->pbuf,"2 This is msg2$       ",20);
+							pu02->size = 20;
 							xQueueSendToBack(LcdTaskQHandle, &pu02, 0);
 						    break;
-						 
 
+						case 2: // Unit #0 Message #3
+//							pu03->linereq = row;   pu03->colreq  = col;
+//							pu03->size = 16;
+//							strncpy((char*)pu03->pbuf,"3 Messages galore      ", 17);
+							lcdi2cputs(&pu03,row,col,"3 Msgs via puts");
+				
+				//			strncpy((char*)pu03->pbuf,"SMOKE A LUCKY AND ? ",20);
+				//			pu03->size = 20;
+							xQueueSendToBack(LcdTaskQHandle, &pu03, 0);
+						    break;
+
+
+						default: // Message number not programmed
+							morse_trap(758);
+							break;
 					}
-			}
+					break;
 
+				default: // Unit number not programmed
+					morse_trap(759);
+					break;
+			}
 		}	
 	}
 }
@@ -105,7 +127,7 @@ HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_14); // Red
  * *************************************************************************/
 osThreadId xLcdmsgsTaskCreate(uint32_t taskpriority, uint16_t numbcb)
 {
-	BaseType_t ret = xTaskCreate(&StartLcdmsgsTask,"LcdI2CTask",256,NULL,taskpriority,&LcdmsgsTaskHandle);
+	BaseType_t ret = xTaskCreate(&StartLcdmsgsTask,"LcdI2CTask",512,NULL,taskpriority,&LcdmsgsTaskHandle);
 	if (ret != pdPASS) morse_trap(35);//return NULL;
 
 	LcdmsgsTaskQHandle = xQueueCreate(numbcb, sizeof(struct LCDMSGTASK_MSGREQ) );

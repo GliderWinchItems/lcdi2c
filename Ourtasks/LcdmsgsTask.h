@@ -13,12 +13,25 @@
 #include "semphr.h"
 #include "LcdTask.h"
 
+union LCDVAR
+{
+	float f;
+	uint32_t u32;
+	 int32_t s32;
+	uint16_t u16[2];
+	 int16_t s16[2];
+	uint8_t  u8[4];
+	 int8_t  s8[4];
+};
+
 struct LCDMSGTASK_MSGREQ
 {
+	union LCDVAR var;
 	uint8_t msgnum;  // Message number (0 -n)
 	uint8_t row;     // Unit number (0 - m)|row (0 - n)
 	uint8_t col;     // Blink (0-1)|column number to start (0-n)
 	uint8_t spare;
+
 };
 
 /* *************************************************************************/
@@ -30,5 +43,6 @@ struct LCDMSGTASK_MSGREQ
   * *************************************************************************/
 
 extern QueueHandle_t LcdmsgsTaskQHandle;
+extern volatile uint16_t LcdmsgsTaskflag; // 0 = routine not ready; 1 = ready
 
 #endif
