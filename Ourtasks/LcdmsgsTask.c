@@ -46,17 +46,39 @@ void StartLcdmsgsTask(void* argument)
  * @return	: NULL = fail, otherwise pointer to buffer struct
 */
  /* Get one line buffers for LCD units. */
-	// Wait until LcdTask has completed instantiation of LCD unit.
+	// Wait until LcdTask has completed instantiation of LCD units
 	while (punitd4x20 == NULL) osDelay(2);
+
 	// Four one line buffers for 4x20 unit 
 	struct LCDTASK_LINEBUF* pu01 = xLcdTaskintgetbuf(punitd4x20,20);
 	struct LCDTASK_LINEBUF* pu02 = xLcdTaskintgetbuf(punitd4x20,20);
 	struct LCDTASK_LINEBUF* pu03 = xLcdTaskintgetbuf(punitd4x20,20);
 	struct LCDTASK_LINEBUF* pu04 = xLcdTaskintgetbuf(punitd4x20,20);
-	if (pu01 == NULL) morse_trap(751);
-	if (pu02 == NULL) morse_trap(752);
-	if (pu03 == NULL) morse_trap(753);
-	if (pu04 == NULL) morse_trap(754);
+	if (pu01 == NULL) morse_trap(701);
+	if (pu02 == NULL) morse_trap(702);
+	if (pu03 == NULL) morse_trap(703);
+	if (pu04 == NULL) morse_trap(704);
+
+	// Four one line buffers for 4x16 unit 
+	struct LCDTASK_LINEBUF* pu11 = xLcdTaskintgetbuf(punitd4x16,16);
+	struct LCDTASK_LINEBUF* pu12 = xLcdTaskintgetbuf(punitd4x16,16);
+	struct LCDTASK_LINEBUF* pu13 = xLcdTaskintgetbuf(punitd4x16,16);
+	struct LCDTASK_LINEBUF* pu14 = xLcdTaskintgetbuf(punitd4x16,16);
+	if (pu11 == NULL) morse_trap(711);
+	if (pu12 == NULL) morse_trap(712);
+	if (pu13 == NULL) morse_trap(713);
+	if (pu14 == NULL) morse_trap(714);
+
+	// Two one line buffers for 2x16 unit 
+	struct LCDTASK_LINEBUF* pu21 = xLcdTaskintgetbuf(punitd2x16,16);
+	struct LCDTASK_LINEBUF* pu22 = xLcdTaskintgetbuf(punitd2x16,16);
+	struct LCDTASK_LINEBUF* pu23 = xLcdTaskintgetbuf(punitd2x16,16);
+	struct LCDTASK_LINEBUF* pu24 = xLcdTaskintgetbuf(punitd2x16,16);
+	if (pu21 == NULL) morse_trap(721);
+	if (pu22 == NULL) morse_trap(722);
+	if (pu23 == NULL) morse_trap(723);
+	if (pu24 == NULL) morse_trap(724);
+
 
 	/* Let other's know msging is ready. */
 	LcdmsgsTaskflag = 1;
@@ -78,6 +100,8 @@ void StartLcdmsgsTask(void* argument)
 			switch (unitnum)
 			{
 				case 0: // 4x20 LCD #1
+				/* ------------ 4x20 unit ---------------------------------- */
+
 					switch (msgreq.msgnum)
 					{
 						case 0: // Unit #0 Message #1
@@ -94,23 +118,39 @@ HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_14); // Red
 						    break;
 
 						case 2: // Unit #0 Message #3
-//							pu03->linereq = row;   pu03->colreq  = col;
-//							pu03->size = 16;
-//							strncpy((char*)pu03->pbuf,"3 Messages galore      ", 17);
-							lcdi2cputs(&pu03,row,col,"3 Msgs via puts");
-				
-				//			strncpy((char*)pu03->pbuf,"SMOKE A LUCKY AND ? ",20);
-				//			pu03->size = 20;
+							lcdi2cputs(&pu03,row,col,"3 Msgs via puts");				
 							xQueueSendToBack(LcdTaskQHandle, &pu03, 0);
 						    break;
-
 
 						default: // Message number not programmed
 							morse_trap(758);
 							break;
 					}
 					break;
+				/* ------------ 4x16 unit ---------------------------------- */
+				case 1: // 4x16 LCD
+					switch (msgreq.msgnum)
+					{
+						case 0: // Unit #1 Message #1
+							break;
 
+						default: // Message number not programmed
+							morse_trap(760);
+							break;
+					}
+					break;
+				/* ------------ 2x16 unit ---------------------------------- */
+				case 2: // 2x16 LCD
+					switch (msgreq.msgnum)
+					{
+						case 0: // Unit #2 Message #1
+							break;
+
+						default: // Message number not programmed
+							morse_trap(761);
+							break;
+					}
+					break;
 				default: // Unit number not programmed
 					morse_trap(759);
 					break;

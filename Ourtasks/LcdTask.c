@@ -96,10 +96,10 @@ taskENTER_CRITICAL();
 			{ // Here this I2C-address is already on list.
 				morse_trap(231); // ### ERROR: Duplicate ###
 			}
+			ptmp = punit;
 			punit = punit->pnext;
 		}
 		/* Here, one or more is on list, but not this one. */
-		ptmp = punit;
 		punit = (struct LCDI2C_UNIT*)calloc(1, sizeof(struct LCDI2C_UNIT));
 		if (punit == NULL) morse_trap(236);
 		ptmp->pnext    = punit;  // Previous last entry points this new entry
