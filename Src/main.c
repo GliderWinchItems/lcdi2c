@@ -302,20 +302,20 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
 
-  struct LCDMSGTASK_MSGREQ lcd4_msg0;
-    lcd4_msg0.msgnum = 0;
-    lcd4_msg0.row    = 0;
-    lcd4_msg0.col    = 0;
+  struct LCDMSGTASK_MSGREQ lcd4x20_msg0;
+    lcd4x20_msg0.msgnum = 0;
+    lcd4x20_msg0.row    = 0;
+    lcd4x20_msg0.col    = 0;
 
- struct LCDMSGTASK_MSGREQ lcd4_msg1;
-    lcd4_msg1.msgnum = 1;
-    lcd4_msg1.row    = 1;
-    lcd4_msg1.col    = 0;
+ struct LCDMSGTASK_MSGREQ lcd4x20_msg1;
+    lcd4x20_msg1.msgnum = 1;
+    lcd4x20_msg1.row    = 1;
+    lcd4x20_msg1.col    = 0;
 
- struct LCDMSGTASK_MSGREQ lcd4_msg2;
-    lcd4_msg2.msgnum = 2;
-    lcd4_msg2.row    = 3;
-    lcd4_msg2.col    = 0;
+ struct LCDMSGTASK_MSGREQ lcd4x20_msg2;
+    lcd4x20_msg2.msgnum = 2;
+    lcd4x20_msg2.row    = 3;
+    lcd4x20_msg2.col    = 0;
 
     while(LcdTaskflag == 0) osDelay(10);
     while(LcdmsgsTaskflag == 0) osDelay(10);
@@ -326,11 +326,11 @@ void StartDefaultTask(void *argument)
       vTaskDelay(1000);
 
     loopct += 1; // Counter for display test purposes
-    lcd4_msg0.var.f = loopct * 0.1;
+    lcd4x20_msg0.var.f = loopct * 0.1;
 
-    xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4_msg0, 0);
-    xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4_msg1, 0);
-    xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4_msg2, 0);
+    xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4x20_msg0, 0);
+    xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4x20_msg1, 0);
+    xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4x20_msg2, 0);
 
     }
   /* USER CODE END 5 */ 
