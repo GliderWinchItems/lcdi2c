@@ -75,6 +75,7 @@ C_SOURCES += Ourwares/morse.c
 C_SOURCES += Ourwares/DTW_counter.c
 C_SOURCES += Ourtasks/LcdTask.c
 C_SOURCES += Ourtasks/LcdmsgsTask.c
+C_SOURCES += Ourtasks/LcdmsgsetTask.c
 
 # ASM sources
 ASM_SOURCES =  \

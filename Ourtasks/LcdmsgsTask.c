@@ -167,7 +167,7 @@ HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_14); // Red
  * *************************************************************************/
 osThreadId xLcdmsgsTaskCreate(uint32_t taskpriority, uint16_t numbcb)
 {
-	BaseType_t ret = xTaskCreate(&StartLcdmsgsTask,"LcdI2CTask",512,NULL,taskpriority,&LcdmsgsTaskHandle);
+	BaseType_t ret = xTaskCreate(&StartLcdmsgsTask,"Lcd,sgsTask",512,NULL,taskpriority,&LcdmsgsTaskHandle);
 	if (ret != pdPASS) morse_trap(35);//return NULL;
 
 	LcdmsgsTaskQHandle = xQueueCreate(numbcb, sizeof(struct LCDMSGTASK_MSGREQ) );
