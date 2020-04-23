@@ -28,6 +28,7 @@
 #include "LcdTask.h"
 #include "lcd_hd44780_i2c.h"
 #include "LcdmsgsTask.h"
+#include "LcdmsgsetTask.h"
 #include "morse.h"
 #include "DTW_counter.h"
 /* USER CODE END Includes */
@@ -147,6 +148,10 @@ int main(void)
 
   retThrd= xLcdmsgsTaskCreate(0, 32);
   if (retThrd == NULL) morse_trap(124);
+
+  retThrd= xLcdmsgsetTaskCreate(0, 32);
+  if (retThrd == NULL) morse_trap(125);
+
 
   /* USER CODE END RTOS_THREADS */
 
@@ -297,10 +302,15 @@ static void MX_GPIO_Init(void)
   * @param  argument: Not used 
   * @retval None
   */
+static struct LCDTASK_LINEBUF* pu21main;
+static void mainmsg1(struct LCDMSGSET lms){
+  lcdi2cprintf(&pu21main,0,0, "MAIN: %0.2f",lms.u.f);
+}
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
+  struct LCDMSGSET lmsmain;
 
   struct LCDMSGTASK_MSGREQ lcd4x20_msg0;
     lcd4x20_msg0.msgnum = 0;
@@ -320,6 +330,9 @@ void StartDefaultTask(void *argument)
     while(LcdTaskflag == 0) osDelay(10);
     while(LcdmsgsTaskflag == 0) osDelay(10);
 
+    pu21main = xLcdTaskintgetbuf(punitd2x16,16);
+    lmsmain.u.f = 3.14f;
+    
     for (;;) {
 
 		HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_15); // BLUE LED
@@ -328,10 +341,17 @@ void StartDefaultTask(void *argument)
     loopct += 1; // Counter for display test purposes
     lcd4x20_msg0.var.f = loopct * 0.1;
 
+    // Send three msgs to 4x20 LCD using LcdmsgsTask
     xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4x20_msg0, 0);
     xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4x20_msg1, 0);
     xQueueSendToBack(LcdmsgsTaskQHandle, &lcd4x20_msg2, 0);
 
+    // Send mainmsg1 (above) via alternate route to 2x16 LCD
+    // using LcdmsgsetTask
+    lmsmain.u.f += .01;
+    lmsmain.ptr = mainmsg1;
+    if (LcdmsgsetTaskQHandle != NULL)
+      xQueueSendToBack(LcdmsgsetTaskQHandle, &lmsmain, 0);
     }
   /* USER CODE END 5 */ 
 }

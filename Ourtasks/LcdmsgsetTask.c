@@ -8,24 +8,12 @@
 #include "task.h"
 #include "queue.h"
 #include "cmsis_os.h"
+#include "stm32f4xx_hal.h"
 #include "LcdmsgsetTask.h"
 #include "morse.h"
 
 osMessageQId LcdmsgsetTaskQHandle;
 TaskHandle_t LcdmsgsetTaskHandle;
-
-/* *************************************************************************
- * osMessageQId LcdmsgsetTask_init(uint16_t qsize);
- *	@brief	: Setup the queue for pointers
- * @return	: NULL = failed; pointer to queue handle
- * *************************************************************************/
- osMessageQId LcdmsgsetTask_init(uint16_t qsize)
-{
-	LcdmsgsetTaskQHandle = xQueueCreate(qsize, sizeof(struct LCDMSGSET) );
-	if (LcdmsgsetTaskQHandle == NULL) return NULL;
-	return LcdmsgsetTaskQHandle;
-}
-
 
 /* *************************************************************************
  * void StartLcdmsgsetTask(void* argument);
@@ -36,16 +24,19 @@ void StartLcdmsgsetTask(void* argument)
 {
 	BaseType_t ret;
 
-	ret = xQueueReceive(LcdmsgsetTaskQHandle,&lsv,0);
-	if (ret == errQUEUE_EMPTY) return;
-
-		if (lsv.ptr != NULL) // jic a NULL ptr got on the queue
-		  (*lsv.ptr)(lsv.u);	// Go do something
-
-	return;
+	for ( ;; )
+	{
+		ret = xQueueReceive(LcdmsgsetTaskQHandle,&lsv,portMAX_DELAY);
+		if (ret == pdPASS)
+		{	
+HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_12);
+			if (lsv.ptr != NULL)  // jic a NULL ptr got on the queue
+		  	  (*lsv.ptr)(lsv.u);  // Go do something
+		}
+	}
 }
  /* *************************************************************************
- * osThreadId xLcdmsgsTaskCreate(uint32_t taskpriority, uint16_t numbcb);
+ * osThreadId xLcdmsgsetTaskCreate(uint32_t taskpriority, uint16_t numbcb);
  * @brief	: Create task; task handle created is global for all to enjoy!
  * @param	: taskpriority = Task priority (just as it says!)
  * @param	: numbcb = number of message requests allowed in queue

@@ -24,20 +24,19 @@ union LCDSETVAR
 
 struct LCDMSGSET
 {
-	void (*ptr)(union LCDSETVAR u);
 	union LCDSETVAR u;
+	void (*ptr)(union LCDSETVAR u);
 };
 
+ /* *************************************************************************/
+ osThreadId xLcdmsgsetTaskCreate(uint32_t taskpriority, uint16_t numbcb);
+ /* @brief	: Create task; task handle created is global for all to enjoy!
+  * @param	: taskpriority = Task priority (just as it says!)
+  * @param	: numbcb = number of message requests allowed in queue
+  * @return	: LcdmsgsTaskHandle
+  * *************************************************************************/
 
-/* *************************************************************************/
-osMessageQId LcdmsgsetTaskt_init(uint16_t qsize);
-/*	@brief	: Setup the queue for pointers
- * @return	: NULL = failed; pointer to queue handle
- * *************************************************************************/
-void lcdmsgset_poll(void);
-/*	@brief	: 
- * *************************************************************************/
-
-extern osMessageQId lcdmsgsetQHandle;
+extern osMessageQId LcdmsgsetTaskQHandle;
+extern TaskHandle_t LcdmsgsetTaskHandle;
 
 #endif
