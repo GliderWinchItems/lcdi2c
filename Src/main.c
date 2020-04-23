@@ -355,7 +355,7 @@ void StartDefaultTask(void *argument)
     // using LcdmsgsetTask
     lmsmain.u.f += .01;
     lmsmain.ptr = mainmsg1;
-    
+
     if (LcdmsgsetTaskQHandle != NULL)
       xQueueSendToBack(LcdmsgsetTaskQHandle, &lmsmain, 0);
     }
