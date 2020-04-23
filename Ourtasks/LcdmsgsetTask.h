@@ -25,7 +25,8 @@ union LCDSETVAR
 struct LCDMSGSET
 {
 	union LCDSETVAR u;
-	void (*ptr)(struct LCDMSGSET);
+//	void (*ptr)(struct LCDMSGSET);
+	void (*ptr)(union LCDSETVAR);
 };
 
  /* *************************************************************************/

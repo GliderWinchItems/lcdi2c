@@ -31,7 +31,7 @@ void StartLcdmsgsetTask(void* argument)
 		{	
 HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_12);
 			if (lsv.ptr != NULL)  // jic a NULL ptr got on the queue
-		  	  (*lsv.ptr)(lsv);  // Go do something
+		  	  (*lsv.ptr)(lsv.u);  // Go do something
 		}
 	}
 }

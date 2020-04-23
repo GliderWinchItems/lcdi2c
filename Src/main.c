@@ -303,8 +303,8 @@ static void MX_GPIO_Init(void)
   * @retval None
   */
 static struct LCDTASK_LINEBUF* pu21main;
-static void mainmsg1(struct LCDMSGSET lms){
-  lcdi2cprintf(&pu21main,0,0, "MAIN: %0.2f",lms.u.f);
+static void mainmsg1(union LCDSETVAR u ){
+  lcdi2cprintf(&pu21main,0,0, "MAIN: %0.2f",u.f);
 }
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
