@@ -313,30 +313,35 @@ void StartDefaultTask(void *argument)
   struct LCDMSGSET lmsmain;
 
   struct LCDMSGTASK_MSGREQ lcd4x20_msg0;
-    lcd4x20_msg0.msgnum = 0;
-    lcd4x20_msg0.row    = 0;
-    lcd4x20_msg0.col    = 0;
+    lcd4x20_msg0.msgnum = 0; // Message number
+    lcd4x20_msg0.row    = 0; // Line #1
+    lcd4x20_msg0.col    = 0; // Begin column
 
  struct LCDMSGTASK_MSGREQ lcd4x20_msg1;
-    lcd4x20_msg1.msgnum = 1;
-    lcd4x20_msg1.row    = 1;
-    lcd4x20_msg1.col    = 0;
+    lcd4x20_msg1.msgnum = 1; // Message number
+    lcd4x20_msg1.row    = 1; // Line #2
+    lcd4x20_msg1.col    = 0; // Begin column
 
  struct LCDMSGTASK_MSGREQ lcd4x20_msg2;
-    lcd4x20_msg2.msgnum = 2;
-    lcd4x20_msg2.row    = 3;
-    lcd4x20_msg2.col    = 0;
+    lcd4x20_msg2.msgnum = 2; // Message number
+    lcd4x20_msg2.row    = 3; // Line #4
+    lcd4x20_msg2.col    = 0; // Begin column
 
+    /* Wait for Tasks to initialize units. */
     while(LcdTaskflag == 0) osDelay(10);
     while(LcdmsgsTaskflag == 0) osDelay(10);
 
+    /* Get a buffer for sending messages via LcdmsgsetTask. */
     pu21main = xLcdTaskintgetbuf(punitd2x16,16);
-    lmsmain.u.f = 3.14f;
+    lmsmain.u.f = 3.14f; // Initial value for testing
+
+    TickType_t xLastWakeTime = xTaskGetTickCount();
     
     for (;;) {
 
 		HAL_GPIO_TogglePin(GPIOD,GPIO_PIN_15); // BLUE LED
-      vTaskDelay(1000);
+
+    vTaskDelayUntil( &xLastWakeTime, pdMS_TO_TICKS(1000) );
 
     loopct += 1; // Counter for display test purposes
     lcd4x20_msg0.var.f = loopct * 0.1;
@@ -350,6 +355,7 @@ void StartDefaultTask(void *argument)
     // using LcdmsgsetTask
     lmsmain.u.f += .01;
     lmsmain.ptr = mainmsg1;
+    
     if (LcdmsgsetTaskQHandle != NULL)
       xQueueSendToBack(LcdmsgsetTaskQHandle, &lmsmain, 0);
     }

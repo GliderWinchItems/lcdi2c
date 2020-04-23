@@ -75,7 +75,7 @@ struct LCDI2C_UNIT* xLcdTaskcreateunit(I2C_HandleTypeDef* phi2c,
     uint8_t numcol)
 {
 	struct LCDI2C_UNIT* punit;
-	struct LCDI2C_UNIT* ptmp;
+	struct LCDI2C_UNIT* ptmp = NULL;
 
 taskENTER_CRITICAL();
 	/* Check if this I2C bus & address (i.e. unit) is already present. */
